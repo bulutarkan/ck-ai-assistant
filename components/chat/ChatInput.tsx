@@ -54,10 +54,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
   const [isRecording, setIsRecording] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [linkPreviews, setLinkPreviews] = useState<any[]>([]);
-  
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  // File size limits (in bytes)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB for images
 
   useEffect(() => {
     // Auto-resize textarea
@@ -98,6 +104,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
     setText('');
     setAttachment(null);
     setLinkPreviews([]); // Clear link previews
+    setFileError(null); // Clear any file errors
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -199,21 +206,85 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
     return supportedMimes.includes(file.type);
   };
 
+  const validateFile = (file: File): string | null => {
+    // Check file size
+    const maxSize = file.type.startsWith('image/') ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
+
+    if (file.size > maxSize) {
+      const sizeMB = (maxSize / (1024 * 1024)).toFixed(0);
+      return `File size must be less than ${sizeMB}MB for ${file.type.startsWith('image/') ? 'images' : 'files'}.`;
+    }
+
+    // Check if file type is supported
+    if (!isFileSupported(file)) {
+      return 'File type not supported. Supported types: images, PDFs, documents, text files, and archives.';
+    }
+
+    return null; // File is valid
+  };
+
   const handleFileSelection = (file: File | undefined) => {
-    if (file && isFileSupported(file)) {
-        // For image files, create preview
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setAttachment({ file, preview: reader.result as string });
-                setIsDragOver(false);
-            };
-            reader.readAsDataURL(file);
-        } else {
-            // For non-image files, create file attachment without preview
-            setAttachment({ file, preview: '' });
-            setIsDragOver(false);
-        }
+    console.log('📁 File selection triggered:', file?.name, file?.type, file?.size);
+
+    setFileError(null); // Clear previous errors
+
+    if (!file) {
+      console.log('❌ No file selected');
+      setIsDragOver(false);
+      return;
+    }
+
+    console.log('🔍 Validating file:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      sizeMB: (file.size / (1024 * 1024)).toFixed(2) + 'MB'
+    });
+
+    // Validate file
+    const validationError = validateFile(file);
+    if (validationError) {
+      console.error('❌ File validation failed:', validationError);
+      setFileError(validationError);
+      setIsDragOver(false);
+      return;
+    }
+
+    console.log('✅ File validation passed, processing file...');
+
+    try {
+      // For image files, create preview
+      if (file.type.startsWith('image/')) {
+        console.log('🖼️ Processing image file...');
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          console.log('📖 Image file read complete, result length:', reader.result?.toString().length);
+          if (reader.result) {
+            setAttachment({ file, preview: reader.result as string });
+            console.log('✅ Image attachment set successfully');
+          } else {
+            console.error('❌ Image reader returned null result');
+            setFileError('Failed to read image file.');
+          }
+          setIsDragOver(false);
+        };
+        reader.onerror = () => {
+          console.error('❌ Image reader error:', reader.error);
+          setFileError('Error reading file. Please try again.');
+          setIsDragOver(false);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For non-image files, create file attachment without preview
+        console.log('📄 Processing non-image file...');
+        setAttachment({ file, preview: '' });
+        console.log('✅ Non-image attachment set successfully');
+        setIsDragOver(false);
+      }
+    } catch (error) {
+      console.error('💥 File processing exception:', error);
+      setFileError('Error processing file. Please try again.');
+      setIsDragOver(false);
     }
   };
 
@@ -302,10 +373,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4">
+      {fileError && (
+        <div className="mb-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <p className="text-red-400 text-sm">{fileError}</p>
+          <button
+            onClick={() => setFileError(null)}
+            className="mt-1 text-red-400 hover:text-red-300 text-xs underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <div
         className={`relative bg-dark-card rounded-2xl shadow-input border transition-all duration-300 ${
           isDragOver
             ? 'border-primary border-2 bg-primary/5 shadow-lg'
+            : fileError
+            ? 'border-red-500/50'
             : 'border-dark-border'
         }`}
         onDragOver={handleDragOver}
@@ -315,7 +399,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
         {attachment && (
             <div className="p-2 pl-4 border-b border-dark-border">
                 <div className="flex items-center gap-2 bg-dark-sidebar p-1 rounded-md max-w-xs">
-                    <img src={attachment.preview} alt="preview" className="w-10 h-10 rounded-md object-cover" />
+                    {attachment.preview ? (
+                        <img src={attachment.preview} alt="preview" className="w-10 h-10 rounded-md object-cover" />
+                    ) : (
+                        <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-md flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold">📄</span>
+                        </div>
+                    )}
                     <p className="text-sm text-text-secondary truncate flex-1">{attachment.file.name}</p>
                     <button onClick={() => setAttachment(null)} className="p-1 text-text-tertiary hover:text-text-primary">
                         <XIcon className="w-4 h-4" />
@@ -359,20 +449,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
                 handleSendMessage();
               }
             }}
-            placeholder={isRecording ? "Recording... speak now" : "Ask anything..."}
+            placeholder={
+              isRecording
+                ? "Recording... speak now"
+                : isProcessingFile
+                ? "Processing file..."
+                : "Ask anything..."
+            }
             className="flex-1 max-h-48 pl-2 pr-2 py-2.5 resize-none bg-transparent focus:outline-none text-text-primary placeholder:text-text-tertiary text-base"
             rows={1}
             disabled={isLoading || isRecording}
           />
           <div className="flex items-center self-end">
-            <button
-              onClick={handleSendMessage}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-primary text-dark-bg hover:bg-primary-focus disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
-              disabled={(!text.trim() && !attachment) || isLoading}
-              aria-label="Send message"
-            >
-              <ArrowUpIcon className="w-5 h-5" />
-            </button>
+          <button
+            onClick={handleSendMessage}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-primary text-dark-bg hover:bg-primary-focus disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
+            disabled={(!text.trim() && !attachment) || isLoading || isProcessingFile}
+            aria-label="Send message"
+          >
+            <ArrowUpIcon className="w-5 h-5" />
+          </button>
           </div>
         </div>
       </div>

@@ -16,10 +16,12 @@ export interface Message {
   id: string;
   sender: MessageSender;
   text: string;
-  image?: string; // base64 string for images sent by user
+  image?: string; // base64 string for images sent by user (for immediate preview)
   file?: {
     name: string;
     type: string;
+    size: number;
+    path?: string; // Supabase Storage path for file reference
   };
   timestamp: number;
 }

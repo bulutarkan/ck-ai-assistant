@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, createContext, useContext, Rea
 import { Conversation, Message, MessageSender } from '../types';
 import { generateResponseStream, generateTitle } from '../services/geminiService';
 import { useAuth } from './useAuth';
-import { supabase } from '../services/supabaseClient';
+import { supabase, uploadFile, getFileUrl } from '../services/supabaseClient';
 
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -230,18 +230,66 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             userId: user.id,
             userName: user.name,
             userSurname: user.surname,
-            messageText: text.substring(0, 50) + (text.length > 50 ? '...' : '')
+            messageText: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+            hasFile: !!file,
+            fileInfo: file ? {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                sizeMB: (file.size / (1024 * 1024)).toFixed(2) + 'MB'
+            } : null
         });
 
         setIsLoading(true);
+
+        let base64Image: string | undefined;
+        let filePath: string | undefined;
+
+        if (file) {
+            try {
+                // For images, we need base64 for Gemini API, but also upload to storage
+                if (file.type.startsWith('image/')) {
+                    console.log('🖼️ Processing image file...');
+                    base64Image = await fileToBase64(file);
+
+                    // Also upload to storage for permanent reference
+                    console.log('🗂️ Uploading image to storage...');
+                    filePath = await uploadFile(file, user.id);
+                    console.log('✅ Image uploaded to storage:', filePath);
+                } else {
+                    // For non-image files, only upload to storage
+                    console.log('📄 Processing non-image file...');
+                    filePath = await uploadFile(file, user.id);
+                    console.log('✅ File uploaded to storage:', filePath);
+                }
+            } catch (error) {
+                console.error('❌ File processing/upload failed:', error);
+                setIsLoading(false);
+                return;
+            }
+        }
 
         const userMessage: Message = {
             id: `msg-${Date.now()}`,
             sender: MessageSender.USER,
             text,
             timestamp: Date.now(),
-            image: file ? await fileToBase64(file) : undefined
+            image: base64Image,
+            file: file ? {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                path: filePath
+            } : undefined
         };
+
+        console.log('📝 User message created:', {
+            id: userMessage.id,
+            hasImage: !!userMessage.image,
+            hasFile: !!userMessage.file,
+            filePath: filePath,
+            imageLength: base64Image?.length
+        });
 
         let conversationId = activeConversationId;
         let needsTitle = false;
@@ -354,12 +402,27 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             });
 
             let fullResponse = '';
-            for await (const chunk of stream) {
-                fullResponse += chunk;
-                updateConversation(conversationId, conv => ({
-                    ...conv,
-                    messages: conv.messages.map(m => m.id === aiMessageId ? { ...m, text: fullResponse } : m),
-                }));
+            let hasReceivedChunk = false;
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Response timeout')), 30000) // 30 second timeout
+            );
+
+            const streamPromise = (async () => {
+                for await (const chunk of stream) {
+                    hasReceivedChunk = true;
+                    fullResponse += chunk;
+                    updateConversation(conversationId, conv => ({
+                        ...conv,
+                        messages: conv.messages.map(m => m.id === aiMessageId ? { ...m, text: fullResponse } : m),
+                    }));
+                }
+            })();
+
+            await Promise.race([streamPromise, timeoutPromise]);
+
+            // If no chunks were received, it means the stream failed silently
+            if (!hasReceivedChunk) {
+                throw new Error('No response received from AI');
             }
 
             if (needsTitle && fullResponse) {

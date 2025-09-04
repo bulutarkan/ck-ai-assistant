@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Message, MessageSender, User } from '../../types';
 import { CopyIcon, ThumbsDownIcon, ThumbsUpIcon } from '../ui/Icons';
+import { getFileUrl } from '../../services/supabaseClient';
 
 // Import the CK logo image
 import ckLogo from '../../assets/unnamed.webp';
@@ -124,6 +125,35 @@ const SimpleMarkdown = ({ text }: { text: string }) => {
 };
 
 
+const FileAttachment = ({ file }: { file: NonNullable<Message['file']> }) => {
+    const handleFileClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (file.path) {
+            const fileUrl = getFileUrl(file.path);
+            window.open(fileUrl, '_blank');
+        }
+    };
+
+    return (
+        <div
+            onClick={handleFileClick}
+            className="flex items-center gap-2 p-2 mb-2 bg-gray-100 dark:bg-gray-800 rounded-md text-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        >
+            <div className="flex-shrink-0 w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded flex items-center justify-center">
+                <span className="text-xs font-bold">📄</span>
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {file.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+            </div>
+        </div>
+    );
+};
+
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message, user }) => {
   const isUser = message.sender === MessageSender.USER;
   const [isCopied, setIsCopied] = useState(false);
@@ -153,8 +183,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, user }) => {
             {isUser ? `${user?.name} ${user?.surname}` : 'Ceku'}
         </div>
         <div className={`p-3 rounded-xl max-w-lg shadow-sm ${isUser ? 'bg-dark-sidebar text-text-primary rounded-br-none' : 'bg-gray-200 dark:bg-dark-card text-gray-900 dark:text-text-primary rounded-bl-none'}`}>
-          {message.image && <img src={message.image} alt="attachment" className="rounded-lg mb-2 max-w-xs" />}
-          {message.file && <div className="p-2 mb-2 bg-gray-100 dark:bg-gray-800 rounded-md text-sm">{message.file.name}</div>}
+          {message.image && message.image.trim() !== '' && !message.file && <img src={message.image} alt="attachment" className="rounded-lg mb-2 max-w-xs" />}
+          {message.file && <FileAttachment file={message.file} />}
           <div className="prose prose-sm dark:prose-invert max-w-none break-words">
             <SimpleMarkdown text={message.text} />
           </div>

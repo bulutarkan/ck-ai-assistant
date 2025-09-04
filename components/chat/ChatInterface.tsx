@@ -69,6 +69,7 @@ export const ChatInterface: React.FC = () => {
   } = useChat();
 
   const handleSendMessage = (text: string, file?: File) => {
+    // Allow sending if there's either text content OR a file attachment
     if (!text.trim() && !file) return;
     sendMessage(text, file);
   };
