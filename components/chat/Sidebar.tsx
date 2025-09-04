@@ -256,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, conversation
     , [conversations, searchTerm]);
   
     return (
-        <aside ref={sidebarRef} className={`bg-dark-sidebar text-text-primary flex flex-col fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-96 border-r border-dark-border`}>
+        <aside ref={sidebarRef} className={`bg-dark-sidebar text-text-primary flex flex-col fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-80 border-r border-dark-border`}>
             <div className="p-4 flex items-center justify-between border-b border-dark-border h-16">
                  <button onClick={onNewChat} className="flex items-center gap-2 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full text-sm font-medium text-text-secondary hover:text-text-primary hover:border-gray-600 transition-colors">
                     <EditIcon className="w-4 h-4" />
