@@ -283,19 +283,21 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }));
 
         try {
-            // Build conversation history for AI context
-            // Use direct approach to ensure we get the latest data
+            // Refresh conversation from DB first to ensure we have latest data
+            await refreshConversationFromDB(conversationId);
+
+            // Small delay to ensure state update
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // Get the fresh conversation data after refresh
             let currentConversation = conversations.find(c => c.id === conversationId);
 
-            // If not found in current conversations and this is the active conversation, create it manually
-            if (!currentConversation && conversationId === activeConversationId) {
-                currentConversation = {
-                    id: conversationId,
-                    title: 'New Conversation',
-                    messages: [userMessage], // Include the current user message
-                    createdAt: Date.now(),
-                };
-            }
+            console.log('🔄 After refresh - conversation check:', {
+                conversationId,
+                foundConversation: !!currentConversation,
+                conversationMessagesCount: currentConversation?.messages?.length || 0,
+                activeConversationId
+            });
 
             console.log('🔍 Debug conversation finding:', {
                 conversationId,
@@ -365,7 +367,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 updateConversation(conversationId, conv => ({ ...conv, title: newTitle }));
             }
 
-            // Refresh conversation from DB to ensure state is synchronized
+            // Final refresh to ensure everything is synchronized
             await refreshConversationFromDB(conversationId);
 
         } catch (error) {
