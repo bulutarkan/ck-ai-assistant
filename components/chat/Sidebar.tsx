@@ -78,7 +78,7 @@ const HistoryItem = ({ conversation, isActive, onSelect, onRename, onDelete }: {
                          <MoreHorizontalIcon className="w-4 h-4" />
                     </button>
                     {isMenuOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-32 bg-dark-sidebar border border-dark-border rounded-md shadow-lg z-10">
+                        <div className="absolute right-0 top-full mt-1 w-32 bg-dark-sidebar border border-dark-border rounded-md shadow-lg z-50">
                            <button onClick={() => { setIsEditing(true); setMenuOpen(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-dark-card">Rename</button>
                            <button onClick={() => { setConfirmingDelete(true); setMenuOpen(false); }} className="w-full text-left px-3 py-1.5 text-sm text-red-500 hover:bg-dark-card">Delete</button>
                         </div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useFiles } from '../../hooks/useFiles';
-import { UploadCloudIcon, FilesIcon, ClockIcon, TrashIcon } from '../ui/Icons';
+import { UploadCloudIcon, FilesIcon, ClockIcon, TrashIcon, DownloadIcon } from '../ui/Icons';
 
 const formatBytes = (bytes: number, decimals = 2) => {
   if (bytes === 0) return '0 Bytes';
@@ -36,6 +36,35 @@ const TimeLeft = ({ expiryTimestamp }: { expiryTimestamp: number }) => {
 }
 
 const FileItem = ({ file, onDelete }: { file: any, onDelete: (id: string) => void }) => {
+    const { getFileBase64 } = useFiles();
+
+    const handleDownload = async () => {
+        try {
+            const base64Data = await getFileBase64(file.id);
+            if (!base64Data) return;
+
+            // Convert base64 to blob
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: file.type });
+
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = file.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+        }
+    };
+
     return (
         <div className="bg-dark-card p-3 rounded-lg flex items-center gap-4 border border-dark-border group">
             <FilesIcon className="w-6 h-6 text-text-secondary flex-shrink-0"/>
@@ -44,6 +73,9 @@ const FileItem = ({ file, onDelete }: { file: any, onDelete: (id: string) => voi
                 <p className="text-xs text-text-tertiary">{formatBytes(file.size)}</p>
             </div>
             <TimeLeft expiryTimestamp={file.expiresAt} />
+            <button onClick={handleDownload} className="p-1 text-text-tertiary hover:text-green-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                <DownloadIcon className="w-4 h-4" />
+            </button>
             <button onClick={() => onDelete(file.id)} className="p-1 text-text-tertiary hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                 <TrashIcon className="w-4 h-4" />
             </button>
@@ -52,7 +84,7 @@ const FileItem = ({ file, onDelete }: { file: any, onDelete: (id: string) => voi
 };
 
 export const FilesView: React.FC = () => {
-    const { files, addFile, deleteFile } = useFiles();
+    const { files, addFile, deleteFile, getFileBase64 } = useFiles();
     const [isDragging, setIsDragging] = useState(false);
 
     const handleFileDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {

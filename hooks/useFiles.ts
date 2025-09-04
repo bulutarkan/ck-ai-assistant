@@ -11,6 +11,7 @@ interface FilesContextType {
     isLoading: boolean;
     addFile: (file: File) => Promise<void>;
     deleteFile: (id: string) => Promise<void>;
+    getFileBase64: (fileId: string) => Promise<string>;
 }
 
 const FilesContext = createContext<FilesContextType | undefined>(undefined);
