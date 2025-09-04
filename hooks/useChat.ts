@@ -246,8 +246,30 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }));
 
         try {
+            // Build conversation history for AI context
+            const currentConversation = conversations.find(c => c.id === conversationId);
+            let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+            if (currentConversation && currentConversation.messages.length > 1) {
+                // Include all previous messages except the current one being sent
+                conversationHistory = currentConversation.messages
+                    .slice(0, -1) // Exclude the current user message (last one)
+                    .filter(msg => msg.text && msg.text.trim()) // Only messages with content
+                    .map(msg => ({
+                        role: msg.sender === MessageSender.USER ? 'user' as const : 'assistant' as const,
+                        content: msg.text
+                    }));
+            }
+
+            console.log('📜 Sending conversation history:', {
+                historyLength: conversationHistory.length,
+                currentMessage: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+                conversationId
+            });
+
             const stream = generateResponseStream({
                 prompt: text,
+                conversationHistory,
                 image: file ? { base64: userMessage.image!, mimeType: file.type } : undefined,
                 user: user,
             });

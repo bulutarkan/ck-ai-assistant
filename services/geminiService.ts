@@ -20,15 +20,28 @@ interface GenerateContentParams {
     mimeType: string;
   };
   user?: User;
+  conversationHistory?: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+  }>;
 }
 
-export async function* generateResponseStream({ prompt, image, user }: GenerateContentParams): AsyncGenerator<string> {
+export async function* generateResponseStream({ prompt, image, user, conversationHistory = [] }: GenerateContentParams): AsyncGenerator<string> {
   const models = [PRIMARY_MODEL, BACKUP_MODEL];
 
   for (const model of models) {
     try {
-      const parts: Part[] = [{ text: prompt }];
+      // Build conversation parts from history + current message
+      const parts: Part[] = [];
 
+      // Add conversation history if available
+      if (conversationHistory.length > 0) {
+        conversationHistory.forEach(message => {
+          parts.push({ text: message.content });
+        });
+      }
+
+      // Add current image if provided
       if (image) {
         parts.unshift({
           inlineData: {
@@ -37,6 +50,9 @@ export async function* generateResponseStream({ prompt, image, user }: GenerateC
           },
         });
       }
+
+      // Add current user prompt
+      parts.push({ text: prompt });
 
       let systemInstruction = `Sen Ceku'sun, CK Health Turkey'nin AI asistani. Satış ve dijital pazarlama ekibimize sağ kolumuz olarak destek oluyorsun.
 
