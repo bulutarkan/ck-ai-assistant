@@ -143,6 +143,39 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }));
     }, [saveConversationToDB]);
 
+    // Function to refresh conversation data from Supabase
+    const refreshConversationFromDB = useCallback(async (conversationId: string) => {
+        if (!user) return;
+
+        try {
+            console.log('🔄 Refreshing conversation from DB:', conversationId);
+            const { data, error } = await supabase
+                .from('chats')
+                .select('*')
+                .eq('id', conversationId)
+                .single();
+
+            if (error) {
+                console.error('❌ Error refreshing conversation:', error);
+                return;
+            }
+
+            if (data) {
+                console.log('✅ Refreshed conversation with', data.messages?.length || 0, 'messages');
+                setConversations(prev => prev.map(conv =>
+                    conv.id === conversationId ? {
+                        id: data.id,
+                        title: data.title,
+                        messages: data.messages || [],
+                        createdAt: new Date(data.created_at).getTime(),
+                    } : conv
+                ));
+            }
+        } catch (error) {
+            console.error('💥 Exception refreshing conversation:', error);
+        }
+    }, [user]);
+
     const startNewChat = useCallback(() => {
         // Clear file input if any when starting new chat
         if (activeConversation && activeConversation.messages.length === 0) {
@@ -153,9 +186,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [activeConversation]);
 
-    const selectConversation = useCallback((id: string) => {
+    const selectConversation = useCallback(async (id: string) => {
+        console.log('🔄 Selecting conversation:', id);
         setActiveConversationId(id);
-    }, []);
+        // Refresh conversation data from DB when selecting
+        await refreshConversationFromDB(id);
+    }, [refreshConversationFromDB]);
 
     const deleteConversation = useCallback(async (id: string) => {
         if (!user) return;
@@ -247,32 +283,65 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }));
 
         try {
-            // Build conversation history for AI context AFTER user message is saved
-            // Small delay to ensure state update
-            await new Promise(resolve => setTimeout(resolve, 50));
+            // Build conversation history for AI context
+            // Use direct approach to ensure we get the latest data
+            let currentConversation = conversations.find(c => c.id === conversationId);
 
-            const currentConversation = conversations.find(c => c.id === conversationId) ||
-                (conversationId === activeConversationId ? activeConversation : null);
+            // If not found in current conversations and this is the active conversation, create it manually
+            if (!currentConversation && conversationId === activeConversationId) {
+                currentConversation = {
+                    id: conversationId,
+                    title: 'New Conversation',
+                    messages: [userMessage], // Include the current user message
+                    createdAt: Date.now(),
+                };
+            }
+
+            console.log('🔍 Debug conversation finding:', {
+                conversationId,
+                activeConversationId,
+                foundConversation: !!currentConversation,
+                conversationsCount: conversations.length,
+                allConversationIds: conversations.map(c => c.id),
+                usingFallback: !currentConversation && conversationId === activeConversationId
+            });
 
             let conversationHistory: Array<{ role: 'user' | 'model'; content: string }> = [];
 
-            if (currentConversation) {
+            if (currentConversation && currentConversation.messages) {
                 // Include all previous messages except the AI placeholder
-                conversationHistory = currentConversation.messages
+                const rawMessages = currentConversation.messages;
+
+                conversationHistory = rawMessages
                     .filter(msg => msg.id !== aiMessageId && msg.text && msg.text.trim())
                     .map(msg => ({
                         role: msg.sender === MessageSender.USER ? 'user' as const : 'model' as const,
                         content: msg.text
                     }));
+
+                console.log('📋 Raw messages in conversation:', {
+                    totalRawMessages: rawMessages.length,
+                    filteredMessages: conversationHistory.length,
+                    messageSummary: rawMessages.map(m => ({
+                        id: m.id,
+                        sender: m.sender,
+                        hasText: !!m.text,
+                        isAiPlaceholder: m.id === aiMessageId
+                    }))
+                });
             }
 
-            console.log('📜 Conversation context for AI:', {
+            console.log('📜 Full conversation context for AI:', {
                 conversationId,
                 conversationFound: !!currentConversation,
-                totalMessages: currentConversation?.messages.length || 0,
+                totalMessages: currentConversation?.messages?.length || 0,
                 historyLength: conversationHistory.length,
-                history: conversationHistory.slice(-3), // Show last 3 messages
-                currentUserMessage: text.substring(0, 50) + (text.length > 50 ? '...' : '')
+                fullHistory: conversationHistory,
+                last3Messages: conversationHistory.slice(-3),
+                currentUserMessage: text,
+                isNewConversation: conversationHistory.length === 0,
+                hasPreviousInteractions: conversationHistory.length > 0,
+                conversationHistorySample: conversationHistory.slice(0, 2) // Show first 2 for debugging
             });
 
             const stream = generateResponseStream({
@@ -295,6 +364,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 const newTitle = await generateTitle(`${text}\n\n${fullResponse}`);
                 updateConversation(conversationId, conv => ({ ...conv, title: newTitle }));
             }
+
+            // Refresh conversation from DB to ensure state is synchronized
+            await refreshConversationFromDB(conversationId);
 
         } catch (error) {
             console.error("Error sending message to AI:", error);
