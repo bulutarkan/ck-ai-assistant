@@ -31,26 +31,27 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-dark-bg to-dark-card p-4">
-      <div className="w-full max-w-md bg-dark-card rounded-2xl shadow-xl p-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-dark-sidebar rounded-full mb-4">
+    <div className="min-vh-100 d-flex justify-content-center align-items-center bg-dark-bg p-4">
+      <div className="w-100 mw-md bg-dark-card rounded-4 shadow-lg p-4 p-lg-5">
+        <div className="text-center mb-4">
+          <div className="d-inline-flex justify-content-center align-items-center bg-dark-sidebar rounded-circle mb-4" style={{width: "4rem", height: "4rem"}}>
             <img
               src="/assets/unnamed.webp"
               alt="CK Health Logo"
-              className="w-10 h-10 object-contain"
+              style={{width: "2.5rem", height: "2.5rem"}}
+              className="object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="fs-2 fw-bold text-white">
             Welcome Back
           </h1>
           <p className="text-text-secondary mt-2">Sign in to your CK AI Assistant account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-white mb-2">
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <div className="mb-3">
+              <label className="form-label fw-bold text-white mb-2">
                 Email Address
               </label>
               <input
@@ -59,55 +60,61 @@ export const LoginPage: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading || auth.loading}
-                className="w-full px-4 py-3 border-2 border-dark-border rounded-xl shadow-sm placeholder-text-tertiary text-white bg-dark-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="form-control bg-dark-border text-white border-dark-border border-2"
+                style={{borderRadius: "0.75rem"}}
                 placeholder="Enter your email"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-white mb-2">
+            <div className="mb-3">
+              <label className="form-label fw-bold text-white mb-2">
                 Password
               </label>
-              <div className="relative">
+              <div className="position-relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading || auth.loading}
-                  className="w-full px-4 py-3 pr-12 border-2 border-dark-border rounded-xl shadow-sm placeholder-text-tertiary text-white bg-dark-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="form-control bg-dark-border text-white border-dark-border border-2"
+                  style={{borderRadius: "0.75rem", paddingRight: "3rem"}}
                   placeholder="Enter your password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-primary transition-colors"
+                  className="btn btn-link position-absolute top-50 end-0 translate-middle-y p-0 me-1 text-text-secondary"
                   disabled={isLoading || auth.loading}
+                  style={{border: "none"}}
                 >
-                  {showPassword ? (
-                    <EyeSlashIcon className="w-5 h-5" />
-                  ) : (
-                    <EyeIcon className="w-5 h-5" />
-                  )}
+                  <div style={{width: "1.25rem", height: "1.25rem"}}>
+                    {showPassword ? (
+                      <EyeSlashIcon />
+                    ) : (
+                      <EyeIcon />
+                    )}
+                  </div>
                 </button>
               </div>
             </div>
           </div>
 
           {(auth.authError) && (
-            <div className="bg-red-900/20 border border-red-800/50 rounded-xl p-4">
-              <p className="text-sm text-red-400">{auth.authError}</p>
+            <div className="alert alert-danger border-0 rounded-4" style={{backgroundColor: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.5)"}}>
+              <p className="text-danger mb-0 small">{auth.authError}</p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={isLoading || auth.loading}
-            className="w-full flex items-center justify-center py-3.5 px-4 bg-dark-border hover:bg-dark-card text-white font-semibold rounded-xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none hover:scale-[1.05] transform"
+            className="btn w-100 py-3 px-4 fw-semibold bg-dark-border hover:bg-dark-card text-white border-0 rounded-4 transition-all disabled:opacity-50"
+            style={{borderRadius: "0.75rem"}}
           >
             {isLoading || auth.loading ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                <div className="spinner-border spinner-border-sm me-2" role="status"></div>
                 Signing in...
               </>
             ) : (
@@ -116,12 +123,13 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-8 text-center">
-          <p className="text-text-secondary">
+        <div className="mt-4 text-center">
+          <p className="text-text-secondary mb-0">
             Don't have an account?{' '}
             <Link
               to="/signup"
-              className="font-semibold text-primary hover:text-primary-focus transition-colors duration-200"
+              className="fw-semibold text-primary text-decoration-none transition-all"
+              style={{transitionDuration: "0.2s"}}
             >
               Create one here
             </Link>

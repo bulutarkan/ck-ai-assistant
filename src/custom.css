@@ -1,0 +1,49 @@
+:root {
+  /* Dark Theme Colors */
+  --dark-bg: #101010;
+  --dark-sidebar: #171717;
+  --dark-card: #212121;
+  --dark-border: #2D2D2D;
+  --primary: #EAEAEA;
+  --primary-focus: #FFFFFF;
+  --text-primary: #EAEAEA;
+  --text-secondary: #A7A7A7;
+  --text-tertiary: #6F6F6F;
+}
+
+body.dark {
+  background-color: var(--dark-bg);
+  color: var(--text-primary);
+}
+
+/* Custom Dark Theme Overrides */
+.bg-dark-bg { background-color: var(--dark-bg) !important; }
+.bg-dark-sidebar { background-color: var(--dark-sidebar) !important; }
+.bg-dark-card { background-color: var(--dark-card) !important; }
+.border-dark-border { border-color: var(--dark-border) !important; }
+
+.text-text-primary { color: var(--text-primary) !important; }
+.text-text-secondary { color: var(--text-secondary) !important; }
+.text-text-tertiary { color: var(--text-tertiary) !important; }
+
+/* Transition and Hover Effects */
+.transition-all { transition: all 0.3s ease !important; }
+.hover\:bg-dark-card:hover { background-color: var(--dark-card) !important; }
+.hover\:border-primary\/50:hover { border-color: rgba(234, 234, 234, 0.5) !important; }
+
+/* Specific Component Styles */
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--dark-bg);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-focus);
+}
+
+/* Responsive Utilities */
+@media (max-width: 768px) {
+  .sm\:flex-row {
+    flex-direction: row !important;
+  }
+}

@@ -25,8 +25,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-bg">
-        <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent"></div>
+      <div className="min-vh-100 d-flex justify-content-center align-items-center bg-dark-bg">
+        <div className="spinner-border border-primary" style={{width: "3rem", height: "3rem"}} role="status"></div>
       </div>
     );
   }
@@ -44,8 +44,8 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-bg">
-        <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent"></div>
+      <div className="min-vh-100 d-flex justify-content-center align-items-center bg-dark-bg">
+        <div className="spinner-border border-primary" style={{width: "3rem", height: "3rem"}} role="status"></div>
       </div>
     );
   }
@@ -75,7 +75,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <main className="min-h-screen bg-dark-bg">
+      <main className="min-vh-100 bg-dark-bg">
         <Routes>
           {/* Protected routes - require authentication */}
           <Route
