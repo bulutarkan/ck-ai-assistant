@@ -1,4 +1,4 @@
-import { GoogleGenAI, Part } from "@google/genai";
+import { GoogleGenAI, Part, Content } from "@google/genai";
 import { User } from '../types';
 
 // Ensure the API key is available from environment variables
@@ -21,7 +21,7 @@ interface GenerateContentParams {
   };
   user?: User;
   conversationHistory?: Array<{
-    role: 'user' | 'assistant';
+    role: 'user' | 'model';
     content: string;
   }>;
 }
@@ -31,19 +31,25 @@ export async function* generateResponseStream({ prompt, image, user, conversatio
 
   for (const model of models) {
     try {
-      // Build conversation parts from history + current message
-      const parts: Part[] = [];
+      // Build conversation contents from history + current message
+      const contents: Content[] = [];
 
       // Add conversation history if available
       if (conversationHistory.length > 0) {
         conversationHistory.forEach(message => {
-          parts.push({ text: message.content });
+          contents.push({
+            parts: [{ text: message.content }],
+            role: message.role
+          });
         });
       }
 
+      // Build current message parts
+      const currentParts: Part[] = [];
+
       // Add current image if provided
       if (image) {
-        parts.unshift({
+        currentParts.push({
           inlineData: {
             data: image.base64,
             mimeType: image.mimeType,
@@ -52,7 +58,13 @@ export async function* generateResponseStream({ prompt, image, user, conversatio
       }
 
       // Add current user prompt
-      parts.push({ text: prompt });
+      currentParts.push({ text: prompt });
+
+      // Add current message to contents
+      contents.push({
+        parts: currentParts,
+        role: 'user'
+      });
 
       let systemInstruction = `Sen Ceku'sun, CK Health Turkey'nin AI asistani. Satış ve dijital pazarlama ekibimize sağ kolumuz olarak destek oluyorsun.
 
@@ -91,9 +103,16 @@ Take a deep breath and work on this problem step by step.`;
           systemInstruction += `\n\nYou are currently talking to ${user.name} ${user.surname}. Address them by their name when appropriate to provide a more personalized experience.`;
       }
 
+      console.log('🤖 Sending to Gemini API:', {
+        model,
+        conversationLength: conversationHistory.length,
+        hasImage: !!image,
+        userName: user?.name
+      });
+
       const responseStream = await ai.models.generateContentStream({
         model: model,
-        contents: { parts: parts },
+        contents: contents,
         config: {
           systemInstruction: systemInstruction,
         },

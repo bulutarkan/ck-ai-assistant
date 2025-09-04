@@ -211,6 +211,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         let needsTitle = false;
 
         // Create new conversation if none is active
+        // First, ensure user message is added to conversation
         if (!conversationId) {
             // Generate a proper UUID for the conversation ID
             conversationId = crypto.randomUUID();
@@ -246,25 +247,32 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }));
 
         try {
-            // Build conversation history for AI context
-            const currentConversation = conversations.find(c => c.id === conversationId);
-            let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+            // Build conversation history for AI context AFTER user message is saved
+            // Small delay to ensure state update
+            await new Promise(resolve => setTimeout(resolve, 50));
 
-            if (currentConversation && currentConversation.messages.length > 1) {
-                // Include all previous messages except the current one being sent
+            const currentConversation = conversations.find(c => c.id === conversationId) ||
+                (conversationId === activeConversationId ? activeConversation : null);
+
+            let conversationHistory: Array<{ role: 'user' | 'model'; content: string }> = [];
+
+            if (currentConversation) {
+                // Include all previous messages except the AI placeholder
                 conversationHistory = currentConversation.messages
-                    .slice(0, -1) // Exclude the current user message (last one)
-                    .filter(msg => msg.text && msg.text.trim()) // Only messages with content
+                    .filter(msg => msg.id !== aiMessageId && msg.text && msg.text.trim())
                     .map(msg => ({
-                        role: msg.sender === MessageSender.USER ? 'user' as const : 'assistant' as const,
+                        role: msg.sender === MessageSender.USER ? 'user' as const : 'model' as const,
                         content: msg.text
                     }));
             }
 
-            console.log('📜 Sending conversation history:', {
+            console.log('📜 Conversation context for AI:', {
+                conversationId,
+                conversationFound: !!currentConversation,
+                totalMessages: currentConversation?.messages.length || 0,
                 historyLength: conversationHistory.length,
-                currentMessage: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
-                conversationId
+                history: conversationHistory.slice(-3), // Show last 3 messages
+                currentUserMessage: text.substring(0, 50) + (text.length > 50 ? '...' : '')
             });
 
             const stream = generateResponseStream({
