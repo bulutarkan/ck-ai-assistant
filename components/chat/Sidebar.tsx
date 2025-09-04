@@ -55,7 +55,6 @@ const HistoryItem = ({
     const [isConfirmingDelete, setConfirmingDelete] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const isMenuOpen = openMenuId === conversation.id;
     const isEditing = editingMenuId === conversation.id;
 
     useEffect(() => {
@@ -72,48 +71,56 @@ const HistoryItem = ({
         setEditingMenuId(null);
     };
 
-    const toggleMenu = () => {
-        setOpenMenuId(isMenuOpen ? null : conversation.id);
-    };
-
-    const closeMenu = () => {
-        setOpenMenuId(null);
+    const startRename = () => {
+        setEditingMenuId(conversation.id);
     };
 
     return (
-        <div className={`group relative pr-4 rounded-md ${isActive ? 'bg-dark-card/70' : 'hover:bg-dark-card/50'}`}>
+        <div className={`group flex items-center gap-2 px-3 py-2 rounded-md ${isActive ? 'bg-dark-card/70' : 'hover:bg-dark-card/50'}`}>
             {isEditing ? (
-                <div className="flex items-center gap-1 p-1.5">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                     <input
                         ref={inputRef}
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         onBlur={handleSave}
                         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                        className="w-full bg-dark-border text-sm p-1 rounded-md focus:outline-none"
+                        className="flex-1 bg-dark-border text-sm px-2 py-1 rounded-md focus:outline-none min-w-0 truncate"
                     />
-                    <button onClick={handleSave} className="p-1 text-green-500 hover:bg-dark-border rounded-md"><CheckIcon className="w-4 h-4"/></button>
-                    <button onClick={() => setEditingMenuId(null)} className="p-1 text-red-500 hover:bg-dark-border rounded-md"><XIcon className="w-4 h-4"/></button>
+                    <button onClick={handleSave} className="flex-shrink-0 p-1 text-green-500 hover:bg-dark-border rounded-md">
+                        <CheckIcon className="w-4 h-4"/>
+                    </button>
+                    <button onClick={() => setEditingMenuId(null)} className="flex-shrink-0 p-1 text-red-500 hover:bg-dark-border rounded-md">
+                        <XIcon className="w-4 h-4"/>
+                    </button>
                 </div>
             ) : (
-                <button onClick={() => onSelect(conversation.id)} className="w-full text-left text-sm text-text-secondary hover:text-text-primary px-3 py-1.5 rounded-md truncate transition-colors">
-                    {conversation.title}
-                </button>
+                <>
+                    <button
+                        onClick={() => onSelect(conversation.id)}
+                        className="flex-1 text-left text-sm text-text-secondary hover:text-text-primary truncate transition-colors min-w-0"
+                    >
+                        {conversation.title}
+                    </button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                            onClick={startRename}
+                            className="p-1.5 text-text-tertiary hover:text-blue-500 hover:bg-dark-border rounded-md transition-colors"
+                            title="Rename chat"
+                        >
+                            <EditIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setConfirmingDelete(true)}
+                            className="p-1.5 text-text-tertiary hover:text-red-500 hover:bg-dark-border rounded-md transition-colors"
+                            title="Delete chat"
+                        >
+                            <TrashIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                </>
             )}
 
-            {!isEditing && (
-                <div className="absolute right-1 top-1/2 -translate-y-1/2">
-                    <button onClick={toggleMenu} className="p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 text-text-tertiary hover:text-text-primary hover:bg-dark-card">
-                         <MoreHorizontalIcon className="w-4 h-4" />
-                    </button>
-                    {isMenuOpen && (
-                        <div className="absolute left-0 top-full mt-1 w-32 bg-dark-sidebar border border-dark-border rounded-md shadow-lg z-70">
-                           <button onClick={() => { setEditingMenuId(conversation.id); closeMenu(); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-dark-card">Rename</button>
-                           <button onClick={() => { setConfirmingDelete(true); closeMenu(); }} className="w-full text-left px-3 py-1.5 text-sm text-red-500 hover:bg-dark-card">Delete</button>
-                        </div>
-                    )}
-                </div>
-            )}
             <ConfirmationModal
                 isOpen={isConfirmingDelete}
                 title="Delete Chat?"
@@ -249,7 +256,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, conversation
     , [conversations, searchTerm]);
   
     return (
-        <aside ref={sidebarRef} className={`bg-dark-sidebar text-text-primary flex flex-col fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-72 border-r border-dark-border`}>
+        <aside ref={sidebarRef} className={`bg-dark-sidebar text-text-primary flex flex-col fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-96 border-r border-dark-border`}>
             <div className="p-4 flex items-center justify-between border-b border-dark-border h-16">
                  <button onClick={onNewChat} className="flex items-center gap-2 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full text-sm font-medium text-text-secondary hover:text-text-primary hover:border-gray-600 transition-colors">
                     <EditIcon className="w-4 h-4" />

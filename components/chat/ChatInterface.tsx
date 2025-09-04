@@ -118,7 +118,7 @@ export const ChatInterface: React.FC = () => {
         currentView={view}
         onSetView={setView}
       />
-      <div className={`h-full flex-1 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-72' : 'ml-0'}`}>
+      <div className={`h-full flex-1 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-96' : 'ml-0'}`}>
         <Header
             onToggleSidebar={() => setSidebarOpen(!isSidebarOpen)}
             isSidebarOpen={isSidebarOpen}
