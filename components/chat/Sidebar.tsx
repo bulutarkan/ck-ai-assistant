@@ -30,12 +30,33 @@ const NavItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNo
     </button>
 );
 
-const HistoryItem = ({ conversation, isActive, onSelect, onRename, onDelete }: { conversation: Conversation, isActive: boolean, onSelect: (id: string) => void, onRename: (id: string, title: string) => void, onDelete: (id: string) => void }) => {
-    const [isEditing, setIsEditing] = useState(false);
+const HistoryItem = ({
+    conversation,
+    isActive,
+    onSelect,
+    onRename,
+    onDelete,
+    openMenuId,
+    setOpenMenuId,
+    editingMenuId,
+    setEditingMenuId
+}: {
+    conversation: Conversation,
+    isActive: boolean,
+    onSelect: (id: string) => void,
+    onRename: (id: string, title: string) => void,
+    onDelete: (id: string) => void,
+    openMenuId: string | null,
+    setOpenMenuId: (id: string | null) => void,
+    editingMenuId: string | null,
+    setEditingMenuId: (id: string | null) => void
+}) => {
     const [title, setTitle] = useState(conversation.title);
-    const [isMenuOpen, setMenuOpen] = useState(false);
     const [isConfirmingDelete, setConfirmingDelete] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const isMenuOpen = openMenuId === conversation.id;
+    const isEditing = editingMenuId === conversation.id;
 
     useEffect(() => {
         if (isEditing) {
@@ -43,12 +64,20 @@ const HistoryItem = ({ conversation, isActive, onSelect, onRename, onDelete }: {
             inputRef.current?.select();
         }
     }, [isEditing]);
-    
+
     const handleSave = () => {
         if (title.trim() && title.trim() !== conversation.title) {
             onRename(conversation.id, title.trim());
         }
-        setIsEditing(false);
+        setEditingMenuId(null);
+    };
+
+    const toggleMenu = () => {
+        setOpenMenuId(isMenuOpen ? null : conversation.id);
+    };
+
+    const closeMenu = () => {
+        setOpenMenuId(null);
     };
 
     return (
@@ -64,7 +93,7 @@ const HistoryItem = ({ conversation, isActive, onSelect, onRename, onDelete }: {
                         className="w-full bg-dark-border text-sm p-1 rounded-md focus:outline-none"
                     />
                     <button onClick={handleSave} className="p-1 text-green-500 hover:bg-dark-border rounded-md"><CheckIcon className="w-4 h-4"/></button>
-                    <button onClick={() => setIsEditing(false)} className="p-1 text-red-500 hover:bg-dark-border rounded-md"><XIcon className="w-4 h-4"/></button>
+                    <button onClick={() => setEditingMenuId(null)} className="p-1 text-red-500 hover:bg-dark-border rounded-md"><XIcon className="w-4 h-4"/></button>
                 </div>
             ) : (
                 <button onClick={() => onSelect(conversation.id)} className="w-full text-left text-sm text-text-secondary hover:text-text-primary px-3 py-1.5 rounded-md truncate transition-colors">
@@ -74,13 +103,13 @@ const HistoryItem = ({ conversation, isActive, onSelect, onRename, onDelete }: {
 
             {!isEditing && (
                 <div className="absolute right-1 top-1/2 -translate-y-1/2">
-                    <button onClick={() => setMenuOpen(!isMenuOpen)} className="p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 text-text-tertiary hover:text-text-primary hover:bg-dark-card">
+                    <button onClick={toggleMenu} className="p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 text-text-tertiary hover:text-text-primary hover:bg-dark-card">
                          <MoreHorizontalIcon className="w-4 h-4" />
                     </button>
                     {isMenuOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-32 bg-dark-sidebar border border-dark-border rounded-md shadow-lg z-50">
-                           <button onClick={() => { setIsEditing(true); setMenuOpen(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-dark-card">Rename</button>
-                           <button onClick={() => { setConfirmingDelete(true); setMenuOpen(false); }} className="w-full text-left px-3 py-1.5 text-sm text-red-500 hover:bg-dark-card">Delete</button>
+                        <div className="absolute right-0 top-full mt-1 w-32 bg-dark-sidebar border border-dark-border rounded-md shadow-lg z-70">
+                           <button onClick={() => { setEditingMenuId(conversation.id); closeMenu(); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-dark-card">Rename</button>
+                           <button onClick={() => { setConfirmingDelete(true); closeMenu(); }} className="w-full text-left px-3 py-1.5 text-sm text-red-500 hover:bg-dark-card">Delete</button>
                         </div>
                     )}
                 </div>
@@ -198,13 +227,29 @@ const UserProfile = ({ onToggleSidebar, onOpenSettings }: { onToggleSidebar: () 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, conversations, activeConversationId, onSelectConversation, onNewChat, onRenameConversation, onDeleteConversation, onOpenSettings, currentView, onSetView }) => {
     const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
+    const sidebarRef = useRef<HTMLElement>(null);
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+                setOpenMenuId(null);
+                setEditingMenuId(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const filteredConversations = useMemo(() => 
         conversations.filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()))
     , [conversations, searchTerm]);
   
     return (
-        <aside className={`bg-dark-sidebar text-text-primary flex flex-col fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-72 border-r border-dark-border`}>
+        <aside ref={sidebarRef} className={`bg-dark-sidebar text-text-primary flex flex-col fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-72 border-r border-dark-border`}>
             <div className="p-4 flex items-center justify-between border-b border-dark-border h-16">
                  <button onClick={onNewChat} className="flex items-center gap-2 px-3 py-1.5 bg-dark-card border border-dark-border rounded-full text-sm font-medium text-text-secondary hover:text-text-primary hover:border-gray-600 transition-colors">
                     <EditIcon className="w-4 h-4" />
@@ -244,6 +289,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, conversation
                                 onSelect={onSelectConversation}
                                 onRename={onRenameConversation}
                                 onDelete={onDeleteConversation}
+                                openMenuId={openMenuId}
+                                setOpenMenuId={setOpenMenuId}
+                                editingMenuId={editingMenuId}
+                                setEditingMenuId={setEditingMenuId}
                             />
                         ))}
                     </div>
